@@ -1,3 +1,4 @@
+#pragma once
 #ifndef AVL_TREE_H
 #define AVL_TREE_H
 
@@ -87,10 +88,13 @@ private:
 
     AVLNode *insertHelper(AVLNode *node, Record data)
     {
+        // 1. Empty position → create new node
         if (node == nullptr)
         {
             return new AVLNode(data);
         }
+
+        // 2. Normal BST insertion
         if (data.name < node->data.name)
         {
             node->left = insertHelper(node->left, data);
@@ -101,31 +105,50 @@ private:
         }
         else
         {
+            // 3. Name already exists → UPDATE record
+            node->data = data;
             return node;
         }
 
-        node->height = 1 + max(getHeight(node->left), getHeight(node->right));
+        // 4. Update height
+        node->height = 1 + max(
+                               getHeight(node->left),
+                               getHeight(node->right));
 
+        // 5. Calculate balance factor
         int b_factor = getBalanceFactor(node);
-        if (b_factor > 1 && data.name < node->left->data.name)
+
+        // 6. LL case
+        if (b_factor > 1 &&
+            data.name < node->left->data.name)
         {
-            node = rotateRight(node);
+            return rotateRight(node);
         }
-        else if (b_factor > 1 && data.name > node->left->data.name)
+
+        // 7. LR case
+        if (b_factor > 1 &&
+            data.name > node->left->data.name)
         {
             node->left = rotateLeft(node->left);
-            node = rotateRight(node);
-        }
-        else if (b_factor < -1 && data.name > node->right->data.name)
-        {
-            node = rotateLeft(node);
-        }
-        else if (b_factor < -1 && data.name < node->right->data.name)
-        {
-            node->right = rotateRight(node->right);
-            node = rotateLeft(node);
+            return rotateRight(node);
         }
 
+        // 8. RR case
+        if (b_factor < -1 &&
+            data.name > node->right->data.name)
+        {
+            return rotateLeft(node);
+        }
+
+        // 9. RL case
+        if (b_factor < -1 &&
+            data.name < node->right->data.name)
+        {
+            node->right = rotateRight(node->right);
+            return rotateLeft(node);
+        }
+
+        // 10. No rotation needed
         return node;
     }
 
