@@ -1,4 +1,5 @@
 #include <string>
+#include <mutex>
 #include <string_view>
 #include "../include/crow_all.h"
 #include "../include/hash_table.h"
@@ -10,8 +11,9 @@ int main()
 {
     crow::SimpleApp app;
     HashTable db;
+    mutex dbMutex;
     replayLog(db);
-    CROW_ROUTE(app, "/api/create_database").methods(crow::HTTPMethod::POST)([&db](const crow::request &req)
+    CROW_ROUTE(app, "/api/create_database").methods(crow::HTTPMethod::POST)([&db, &dbMutex](const crow::request &req)
                                                                             {
 
         if (!isAuthorized(req)) {
@@ -20,6 +22,7 @@ int main()
         res["message"] = "unauthorized";
         return crow::response(401, res);
     }
+    lock_guard<mutex> lock(dbMutex);
 
         auto body = crow::json::load(req.body);
         if(!body || !body.has("owner_key")) {
@@ -44,7 +47,7 @@ int main()
         res["message"]="database created successfully";
         return crow::response(200,res); });
 
-    CROW_ROUTE(app, "/api/update_record").methods(crow::HTTPMethod::PATCH)([&db](const crow::request &req)
+    CROW_ROUTE(app, "/api/update_record").methods(crow::HTTPMethod::PATCH)([&db, &dbMutex](const crow::request &req)
                                                                            {
         if (!isAuthorized(req)) {
         crow::json::wvalue res;
@@ -52,6 +55,7 @@ int main()
         res["message"] = "unauthorized";
         return crow::response(401, res);
     }
+    lock_guard<mutex> lock(dbMutex);
         auto body= crow::json::load(req.body);
         if(!body || !body.has("owner_key") || !body.has("name") || !body.has("age") || !body.has("weight") || !body.has("cgpa")) {
             crow::json::wvalue res;
@@ -88,14 +92,15 @@ int main()
         return crow:: response(200,res); });
 
     CROW_ROUTE(app, "/api/display_record")
-        .methods(crow::HTTPMethod::GET)([&db](const crow::request &req)
+        .methods(crow::HTTPMethod::GET)([&db, &dbMutex](const crow::request &req)
                                         {
 
-                                            if (!isAuthorized(req)) {
+        if (!isAuthorized(req)) {
         crow::json::wvalue res;
         res["status"] = "error";
         res["message"] = "unauthorized";
         return crow::response(401, res); } 
+        lock_guard<mutex> lock(dbMutex);
     const char *ownerKeyParam = req.url_params.get("owner_key");
     const char *nameParam = req.url_params.get("name");
 
@@ -144,7 +149,7 @@ int main()
     return crow::response(200, res); });
 
     CROW_ROUTE(app, "/api/delete_record")
-        .methods(crow::HTTPMethod::DELETE)([&db](const crow::request &req)
+        .methods(crow::HTTPMethod::DELETE)([&db, &dbMutex](const crow::request &req)
                                            {
             if (!isAuthorized(req)) {
         crow::json::wvalue res;
@@ -152,6 +157,7 @@ int main()
         res["message"] = "unauthorized";
         return crow::response(401, res);
     }
+    lock_guard<mutex> lock(dbMutex);
     auto body = crow::json::load(req.body);
 
     if (!body ||
