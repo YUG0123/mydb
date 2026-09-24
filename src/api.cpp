@@ -4,6 +4,7 @@
 #include "../include/hash_table.h"
 #include "../include/avl_tree.h"
 #include "../include/persistence.h"
+#include "../include/auth.h"
 using namespace std;
 int main()
 {
@@ -12,6 +13,13 @@ int main()
     replayLog(db);
     CROW_ROUTE(app, "/api/create_database").methods(crow::HTTPMethod::POST)([&db](const crow::request &req)
                                                                             {
+
+        if (!isAuthorized(req)) {
+        crow::json::wvalue res;
+        res["status"] = "error";
+        res["message"] = "unauthorized";
+        return crow::response(401, res);
+    }
 
         auto body = crow::json::load(req.body);
         if(!body || !body.has("owner_key")) {
@@ -38,6 +46,12 @@ int main()
 
     CROW_ROUTE(app, "/api/update_record").methods(crow::HTTPMethod::PATCH)([&db](const crow::request &req)
                                                                            {
+        if (!isAuthorized(req)) {
+        crow::json::wvalue res;
+        res["status"] = "error";
+        res["message"] = "unauthorized";
+        return crow::response(401, res);
+    }
         auto body= crow::json::load(req.body);
         if(!body || !body.has("owner_key") || !body.has("name") || !body.has("age") || !body.has("weight") || !body.has("cgpa")) {
             crow::json::wvalue res;
@@ -76,6 +90,12 @@ int main()
     CROW_ROUTE(app, "/api/display_record")
         .methods(crow::HTTPMethod::GET)([&db](const crow::request &req)
                                         {
+
+                                            if (!isAuthorized(req)) {
+        crow::json::wvalue res;
+        res["status"] = "error";
+        res["message"] = "unauthorized";
+        return crow::response(401, res); } 
     const char *ownerKeyParam = req.url_params.get("owner_key");
     const char *nameParam = req.url_params.get("name");
 
@@ -122,9 +142,16 @@ int main()
     res["cgpa"] = record->cgpa;
 
     return crow::response(200, res); });
+
     CROW_ROUTE(app, "/api/delete_record")
         .methods(crow::HTTPMethod::DELETE)([&db](const crow::request &req)
                                            {
+            if (!isAuthorized(req)) {
+        crow::json::wvalue res;
+        res["status"] = "error";
+        res["message"] = "unauthorized";
+        return crow::response(401, res);
+    }
     auto body = crow::json::load(req.body);
 
     if (!body ||
