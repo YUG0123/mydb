@@ -3,12 +3,13 @@
 #include "../include/crow_all.h"
 #include "../include/hash_table.h"
 #include "../include/avl_tree.h"
-
+#include "../include/persistence.h"
 using namespace std;
 int main()
 {
     crow::SimpleApp app;
     HashTable db;
+    replayLog(db);
     CROW_ROUTE(app, "/api/create_database").methods(crow::HTTPMethod::POST)([&db](const crow::request &req)
                                                                             {
 
@@ -29,6 +30,7 @@ int main()
             res["message"]="owner_key already exists";
             return crow::response(409,res);
         }
+        appendLog("CREATE " + ownerKey);
         crow::json::wvalue res;
         res["status"]="ok";
         res["message"]="database created successfully";
@@ -57,6 +59,15 @@ int main()
         double cgpa=body["cgpa"].d();
         Record record(name,age,weight,cgpa);
         tree->insert(record);
+
+            appendLog(
+        "INSERT " +
+        ownerKey + " " +
+        name + " " +
+        to_string(age) + " " +
+        to_string(weight) + " " +
+        to_string(cgpa)
+    );
         crow::json::wvalue res;
         res["status"]="ok";
         res["message"]="record updated successfully";
@@ -153,6 +164,7 @@ int main()
     }
 
     tree->remove(name);
+    appendLog("DELETE " + ownerKey + " " + name);
     crow::json::wvalue res;
     res["status"] = "ok";
     res["message"] = "record deleted successfully";
